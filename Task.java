@@ -6,6 +6,10 @@ public class Task implements Comparable<Task> {
 	private String taskCotent;
 	private String startTime;
 	private String endTime;
+	
+	public Task(){
+		
+	}
 
 	public Task (String taskCotent, String startTime, String endTime){
 		this.taskCotent = taskCotent;
@@ -40,11 +44,7 @@ public class Task implements Comparable<Task> {
 		return convertedDate;
 	}
 	
-	public int CompareTo(String anthorStartTime){
-		Date firstDate = convertStringToDate(startTime);
-		Date secondDate = convertStringToDate(anthorStartTime);
-		return firstDate.compareTo(secondDate);
-	}
+	
 
 	@Override
 	public int compareTo(Task anotherTask) {

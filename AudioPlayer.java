@@ -27,7 +27,6 @@ public class AudioPlayer {
         public void play() throws IOException, LineUnavailableException, UnsupportedAudioFileException {
             if (clip == null || !clip.isRunning()) {
                 open();
-                //clip.setFramePosition(0);
                 clip.start();
             }
         }

@@ -4,28 +4,27 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.GridLayout;
-import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.PriorityQueue;
 
 import javax.imageio.ImageIO;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JToolBar;
+import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.Border;
+
+import sun.awt.RepaintArea;
 
 /**
  * 
@@ -35,48 +34,27 @@ import javax.swing.border.Border;
  * @author Kuan Chi Chen
  *
  */
-@SuppressWarnings({ "serial", "restriction" })
-public class ToDoListView extends JPanel implements ActionListener {
-	private JButton fire = new JButton();
-	private JButton coffee = new JButton();
-	private JButton rain = new JButton();
-	private JButton sea = new JButton();
-	private JButton mute = new JButton("Mute");
-	private Clip clip;
-
+public class ToDoListView extends JPanel {
 	private Color titleColor = new Color(153, 204, 255);
-
 	private static final int BORDER_STROKE = 5;
-
-	private boolean firePlayed = false;
-
-	/**
-	 * List of all the image files to load.
-	 */
-	//private String[] imageFileNames = { "firecamp_icon.png", "rain_icon.png" };
-
-	//private static final int ICON_SIZE = 50;
+	protected static PriorityQueue<TaskPanel> toDoQueue = new PriorityQueue<TaskPanel>(); 
+	protected static PriorityQueue<TaskPanel> doneQueue = new PriorityQueue<TaskPanel>();
+	private ToDoListBackend backend = new ToDoListBackend();
+	private static JPanel listPanel = new JPanel();
+	private static JPanel donePanel = new JPanel();
 
 	/**
 	 * The constructor of the Unrestricted Game
 	 * 
 	 * @param JFrame
 	 *            frame
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	public ToDoListView() throws IOException {
-
-		// uses grid layout
 		super(new BorderLayout());
-
 		repaint();
-
-		// add the text
 		add(displayTime(), BorderLayout.CENTER);
-		// add the controls
-		// add(musicControlPane());
 		add(addTaskPanel(), BorderLayout.WEST);
-
 	}
 
 	@Override
@@ -85,7 +63,6 @@ public class ToDoListView extends JPanel implements ActionListener {
 	 */
 	protected void paintComponent(Graphics g) {
 		BufferedImage background = null;
-
 		// set up the image
 		try {
 			background = ImageIO.read(new File("background.jpeg"));
@@ -115,12 +92,8 @@ public class ToDoListView extends JPanel implements ActionListener {
 		title.setForeground(titleColor);
 
 		textPanel.add(title);
-		try {
-			textPanel.add(musicControlPanel());
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		textPanel.add(new WhiteNoise());
+
 		return textPanel;
 	}
 
@@ -128,10 +101,7 @@ public class ToDoListView extends JPanel implements ActionListener {
 
 		JPanel taskPanel = new JPanel(new GridLayout(2, 1));
 		taskPanel.setPreferredSize(new Dimension(350, 1000));
-
 		taskPanel.setOpaque(false);
-
-
 
 		taskPanel.add(createListPanel());
 		taskPanel.add(createDonePanel());
@@ -139,14 +109,81 @@ public class ToDoListView extends JPanel implements ActionListener {
 		return taskPanel;
 	}
 
-	private JPanel createListPanel() throws IOException{
-		
-		JPanel listPanel = new JPanel();
+	private JPanel createListPanel() throws IOException {
+		// the list panel
+
 		listPanel.setOpaque(false);
-		listPanel.setLayout(new GridLayout(8, 1)); 
+		listPanel.setLayout(new GridLayout(10, 1));
+		/** TO DO the addTask JButton **/
+		JButton addTask = setAddButton();
+
+		// title of to do list
+		JLabel label = new JLabel("To-Do List", SwingConstants.CENTER);
+		label.setFont(new Font("Chalkduster", Font.BOLD, 24));
+		label.setForeground(titleColor);
+		// the tasks in the list
+
+		// addTasks(listPanel, true);
+
+		JPanel panel = new JPanel(new BorderLayout());
+
+		setBorderLine(panel);
+		panel.setOpaque(false);
+		panel.add(label, BorderLayout.NORTH);
+		panel.add(listPanel, BorderLayout.CENTER);
+		panel.add(addTask, BorderLayout.SOUTH);
+
+		return panel;
+	}
+	
+	
+	
+
+	private void deleteTask(PriorityQueue<TaskPanel> taskPanel, TaskPanel complete){
+		
+		taskPanel.remove(complete);
+		reDraw(listPanel, taskPanel);
+	
+	}
+
+	
+	private void addTask(PriorityQueue<TaskPanel> taskPanel, TaskPanel newTaskPanel) {
+
+		taskPanel.add(newTaskPanel);
+		reDraw(donePanel, taskPanel);
+		
+	}
+	
+	private void reDraw(JPanel listPanel, PriorityQueue<TaskPanel> taskPanel) { 
+
+		listPanel.removeAll();
+
+		PriorityQueue<TaskPanel> temp = new PriorityQueue<TaskPanel>();
+
+		while (taskPanel.size() != 0) {
+			// get most current slide to show
+			TaskPanel currentTask = taskPanel.poll();
+			temp.add(currentTask);
+			// if s is not null and the time to display this slide is
+			// equal to the current time
+			if (currentTask != null) {
+				// print out time
+				//System.out.println("currentTask: " + currentTask.getTaskContent());
+				//TaskPanel currentTaskPanel = new TaskPanel(true, currentTask.getTask());
+				//currentTaskPanel.setTaskName(currentTask.getTaskContent());
+				listPanel.add(currentTask);
+			}
+
+		}
+
+		taskPanel = temp;
+		repaint();
+		revalidate();
+	}
 
 
 
+	private JButton setAddButton() {
 		JButton addTask = new JButton("Add Tasks");
 		addTask.setFont(new Font("Century Gothic", Font.BOLD, 18));
 		addTask.setForeground(new Color(115, 115, 115));
@@ -154,182 +191,115 @@ public class ToDoListView extends JPanel implements ActionListener {
 		addTask.setOpaque(true);
 		addTask.setBorderPainted(false);
 
-		JLabel label = new JLabel("To-Do List", SwingConstants.CENTER);
-		label.setFont(new Font("Chalkduster", Font.BOLD, 24));
-		label.setForeground(titleColor);
+		addTask.addActionListener(new ActionListener() {
 
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JTextField taskName = new JTextField(5);
+				JTextField startTime = new JTextField(5);
+				JTextField endTime = new JTextField(5);
 
+				JPanel addPanel = new JPanel();
+				addPanel.add(new JLabel("Task:"));
+				addPanel.add(taskName);
+				addPanel.add(Box.createHorizontalStrut(15)); // a spacer
+				addPanel.add(new JLabel("Start time:"));
+				addPanel.add(startTime);
+				addPanel.add(Box.createHorizontalStrut(15)); // a spacer
+				addPanel.add(new JLabel("End time:"));
+				addPanel.add(endTime);
 
-		JPanel[] oneTask = new JPanel[10];
-		for (int i = 0; i < oneTask.length; i ++){
-			oneTask[i] = new JPanel(new BorderLayout());
-			oneTask[i].setOpaque(false); 
-		}
+				int result = JOptionPane.showConfirmDialog(null, addPanel, "Please Enter Your Task",
+						JOptionPane.OK_CANCEL_OPTION);
 
-		JCheckBox[] list = new JCheckBox[8];
+				if (result == JOptionPane.OK_OPTION) {
+					Task newTask = new Task(taskName.getText(), startTime.getText(), endTime.getText());
+					TaskPanel newTaskPanel = new TaskPanel(true, newTask);
 
-		for (int i = 0; i < list.length; i++) {
-			list[i] = new JCheckBox("Data Structure PSA6");
-			list[i].setFont(new Font("Century Gothic", Font.BOLD, 18));
-			list[i].setForeground(new Color(115, 115, 115));
-			oneTask[i].add(list[i], BorderLayout.CENTER);
+					//TaskPanel newTaskPanel = addNewTask(taskName, startTime, endTime);
+					newTaskPanel.deleteButton.addActionListener(new ActionListener() {
+
+						@Override
+						public void actionPerformed(ActionEvent e) {
+							deleteTask(toDoQueue, newTaskPanel);
+						}
+						
+					});
+					
+					newTaskPanel.done.addActionListener(new ActionListener() {
+
+						@Override
+						public void actionPerformed(ActionEvent e) {
+							
+							addTask(doneQueue, newTaskPanel);
+							deleteTask(toDoQueue, newTaskPanel);
+
+						}
+
+					});
+
+					toDoQueue.add(newTaskPanel);
+				}
+				reDraw(listPanel, toDoQueue);
+				repaint();
+				revalidate();
+
+			}
+
 			
-			listPanel.add(oneTask[i]);
-		}
-		
-		Image trash = ImageIO.read(new File("trashbinIcon.png"));
-		
-		JButton[] deleteButtons = new JButton[8];
-		
-		for (int i = 0; i < deleteButtons.length; i ++){
-			deleteButtons[i] = new JButton();
-			deleteButtons[i].setIcon(new ImageIcon(trash));
-			deleteButtons[i].setOpaque(false);
-			deleteButtons[i].setContentAreaFilled(false);
-			deleteButtons[i].setBorderPainted(false);
-			oneTask[i].add(deleteButtons[i], BorderLayout.EAST);
-		}
+		});
+		return addTask;
+	}
 
-		JPanel panel = new JPanel (new BorderLayout()); 
-		setBorderLine(panel);
-		panel.setOpaque(false);
-		panel.add(label, BorderLayout.NORTH);
-		panel.add(listPanel, BorderLayout.CENTER);
-		panel.add(addTask, BorderLayout.SOUTH);
+	
 
-		return panel; 
+	
+	
+	private void addTasks(JPanel listPanel, boolean isIncomplete) throws IOException {
+
+//		TaskPanel[] tasks = new TaskPanel[10];
+//		for (int i = 0; i < tasks.length; i++) {
+//			tasks[i] = new TaskPanel(isIncomplete);
+//			listPanel.add(tasks[i]);
+//		}
 
 	}
 
-	private JPanel createDonePanel(){
+	private JPanel createDonePanel() {
 		JPanel listPanel = new JPanel();
 		listPanel.setOpaque(false);
-		listPanel.setLayout(new GridLayout(8, 1)); 
+		listPanel.setLayout(new GridLayout(10, 1));
 
 		JLabel label = new JLabel("Completed Tasks", SwingConstants.CENTER);
 		label.setFont(new Font("Chalkduster", Font.BOLD, 24));
 		label.setForeground(titleColor);
 
-		JCheckBox[] list = new JCheckBox[8];
-
-
-		for (int i = 0; i < list.length; i++) {
-			list[i] = new JCheckBox("Data Structure PSA6");
-			list[i].setFont(new Font("Century Gothic", Font.BOLD, 18));
-			list[i].setForeground(new Color(115, 115, 115));
-			listPanel.add(list[i]);
+		try {
+			addTasks(listPanel, false);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 
-		JPanel panel = new JPanel (new BorderLayout()); 
+		JPanel panel = new JPanel(new BorderLayout());
 		setBorderLine(panel);
 		panel.setOpaque(false);
 		panel.add(label, BorderLayout.NORTH);
 		panel.add(listPanel, BorderLayout.CENTER);
 
-		return panel; 
+		return panel;
 	}
 
 	private void setBorderLine(JComponent comp) {
-
-		Border border = BorderFactory. createMatteBorder(BORDER_STROKE,BORDER_STROKE,BORDER_STROKE/2,BORDER_STROKE,titleColor);
+		Border border = BorderFactory.createMatteBorder(BORDER_STROKE, BORDER_STROKE, BORDER_STROKE / 2, BORDER_STROKE,
+				titleColor);
 
 		comp.setBorder(BorderFactory.createCompoundBorder(border, BorderFactory.createEmptyBorder(10, 10, 10, 10)));
 	}
-
-	/**
-	 * creates the JPanel that holds the control area
-	 * 
-	 * @return JPanel controlPanel
-	 * @throws IOException
-	 */
-	private JToolBar musicControlPanel() throws IOException {
-
-		JToolBar buttonBar = new JToolBar();
-		buttonBar.setOpaque(false);
-		buttonBar.add(Box.createGlue());
-
-		JButton[] buttons = { fire, coffee, rain, sea, mute };
-
-		Image fireImage = ImageIO.read(new File("fireIcon.png"));
-		Image coffeeImage = ImageIO.read(new File("coffee.png"));
-		Image rainImage = ImageIO.read(new File("rainIcon.png"));
-		Image seaImage = ImageIO.read(new File("sea.png"));
-
-		fire.setIcon(new ImageIcon(fireImage));
-		coffee.setIcon(new ImageIcon(coffeeImage));
-		rain.setIcon(new ImageIcon(rainImage));
-		sea.setIcon(new ImageIcon(seaImage));
-
-		for (JButton button : buttons) {
-			button.setOpaque(false);
-			button.setContentAreaFilled(false);
-			button.setBorderPainted(false);
-			button.addActionListener(this);
-			buttonBar.add(button);
-		}
-
-		buttonBar.add(Box.createGlue());
-		return buttonBar;
-	}
-
-	// /**
-	// * Resizes an image using a Graphics2D object backed by a BufferedImage.
-	// *
-	// * @param srcImg
-	// * - source image to scale
-	// * @param w
-	// * - desired width
-	// * @param h
-	// * - desired height
-	// * @return - the new resized image
-	// */
-	// private Image getScaledImage(Image srcImg, int w, int h) {
-	// BufferedImage resizedImg = new BufferedImage(w, h,
-	// BufferedImage.TYPE_INT_RGB);
-	// Graphics2D g2 = resizedImg.createGraphics();
-	// g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-	// RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-	// g2.drawImage(srcImg, 0, 0, w, h, null);
-	// g2.dispose();
-	// return resizedImg;
-	// }
-
-	public void play(String filename) {
-		try {
-			File file = new File(filename);
-			clip = AudioSystem.getClip();
-			clip.open(AudioSystem.getAudioInputStream(file));
-			clip.start();
-			// Thread.sleep(clip.getMicrosecondLength());
-		} catch (Exception e) {
-			System.err.println(e.getMessage());
-		}
-	}
-
-	@Override
-	public void actionPerformed(ActionEvent e) {
-		if (e.getSource() == fire) {
-			if (!firePlayed){
-				play("fire.wav");
-				firePlayed = true;
-			}
-			else{
-				clip.stop();
-				firePlayed = false;
-			}
-		}
-		if (e.getSource() == sea) {
-			play("sea.wav");
-		}
-		if (e.getSource() == coffee) {
-			play("coffee.wav");
-		}
-		if (e.getSource() == rain) {
-			play("rain.mp3");
-		}
-		if (e.getSource() == mute) {
-			clip.stop();
-		}
-	}
+	
+//	private TaskPanel addNewTask(TaskPanel taskPanel) {
+//		
+//		return newTaskPanel;
+//	}
 
 }
